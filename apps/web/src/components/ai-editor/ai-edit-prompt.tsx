@@ -3,7 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { Show, createSignal } from 'solid-js';
+import { useWorld } from '@diffusionstudio/koota-solid';
 import { useProject } from '@/context/project';
+import { applyAiEditOperations } from '@/engine/ai-apply';
 import { getDeviceProfile } from '@/lib/device-profile';
 import { requestAiEdit } from '@/lib/ai-edit-client';
 
@@ -11,6 +13,7 @@ const profile = getDeviceProfile();
 
 export function AiEditPrompt() {
   const project = useProject();
+  const world = useWorld();
   const [prompt, setPrompt] = createSignal('');
   const [busy, setBusy] = createSignal(false);
   const [status, setStatus] = createSignal('');
@@ -21,7 +24,7 @@ export function AiEditPrompt() {
     if (!text || busy()) return;
 
     setBusy(true);
-    setStatus('AI is planning the edit…');
+    setStatus('AI is analysing and planning the edit…');
     setOperationCount(0);
 
     try {
@@ -32,7 +35,24 @@ export function AiEditPrompt() {
       });
 
       setOperationCount(result.operations.length);
-      setStatus(result.message || 'Edit plan ready.');
+      if (result.operations.length === 0) {
+        setStatus(result.message || 'AI returned no timeline changes.');
+        return;
+      }
+
+      const applied = applyAiEditOperations(world, result.operations);
+      const details = [
+        applied.cuts ? `${applied.cuts} cuts` : '',
+        applied.captions ? `${applied.captions} captions` : '',
+        applied.zooms ? `${applied.zooms} zooms` : '',
+        applied.volumes ? `${applied.volumes} volume changes` : '',
+      ].filter(Boolean).join(', ');
+
+      setStatus(
+        applied.applied > 0
+          ? `Applied ${applied.applied} AI changes${details ? ` · ${details}` : ''}. Ctrl/Cmd+Z undoes the whole pass.`
+          : (result.message || 'AI plan received, but nothing could be applied to the active scene.'),
+      );
     } catch (error) {
       setStatus((error as Error).message || 'AI edit failed.');
     } finally {
@@ -55,7 +75,7 @@ export function AiEditPrompt() {
           <span class="rounded bg-primary/15 px-1.5 py-0.5 text-primary">Chromebook mode</span>
         </Show>
         <span class="ml-auto">
-          {profile.previewHeight}p preview · cloud AI
+          {profile.previewHeight}p preview · cloud AI · real timeline edits
         </span>
       </div>
 
