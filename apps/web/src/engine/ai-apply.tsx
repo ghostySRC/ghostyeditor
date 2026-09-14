@@ -11,7 +11,7 @@
  * reach the project source and the whole AI pass is undoable.
  */
 
-import { Text } from '@diffusionstudio/reconciler';
+import { Sequence, Text } from '@diffusionstudio/reconciler';
 import {
   AdjustmentLayer,
   ChildOf,
@@ -21,6 +21,7 @@ import {
   Group,
   getActiveEntity,
   getNextName,
+  getParentEntity,
   isGroup,
   secondsToFrames,
   store,
@@ -94,6 +95,36 @@ function topLevelNodes(world: World, scene: Entity): Entity[] {
   return [...world.query(NODES, ChildOf(scene))];
 }
 
+/**
+ * Splits one leaf at an absolute project frame and returns head/tail. When the
+ * leaf lived directly on a non-group timeline container, preserve the normal
+ * editor UX by wrapping the two pieces in a sequence just like Split does.
+ */
+function splitLeafAt(world: World, entity: Entity, frame: number): { head: Entity; tail: Entity } | null {
+  if (!entity.isAlive() || isGroup(entity)) return null;
+  const computed = store(world, Computed);
+  const start = computed.start[entity.id()];
+  const end = computed.end[entity.id()];
+  if (start === undefined || end === undefined || frame <= start || frame >= end) return null;
+
+  const editor = getDocumentEditor(world);
+  const parent = getParentEntity(entity);
+  const [pair] = editor.duplicateInPlace([entity]);
+  if (!pair) return null;
+
+  trimOut(world, pair.original, frame);
+  trimIn(world, pair.copy, frame);
+
+  if (parent !== null && !isGroup(parent)) {
+    editor.wrap(
+      [pair.original, pair.copy],
+      () => <Sequence name={getNextName(world, 'Sequence')} />,
+    );
+  }
+
+  return { head: pair.original, tail: pair.copy };
+}
+
 /** Remove one absolute frame span from an entity, preserving everything outside it. */
 function carveSpan(world: World, entity: Entity, startFrame: number, endFrame: number): void {
   if (!entity.isAlive()) return;
@@ -128,10 +159,19 @@ function carveSpan(world: World, entity: Entity, startFrame: number, endFrame: n
   } else if (startCovered && !endCovered) {
     trimIn(world, entity, endFrame);
   } else {
-    // Hole in the middle: preserve a head and a tail.
+    // Hole in the middle: preserve a head and a tail, dropping the middle.
+    const parent = getParentEntity(entity);
     const [pair] = editor.duplicateInPlace([entity]);
-    trimOut(world, entity, startFrame);
-    if (pair) trimIn(world, pair.copy, endFrame);
+    if (!pair) return;
+    trimOut(world, pair.original, startFrame);
+    trimIn(world, pair.copy, endFrame);
+
+    if (parent !== null && !isGroup(parent)) {
+      editor.wrap(
+        [pair.original, pair.copy],
+        () => <Sequence name={getNextName(world, 'Sequence')} />,
+      );
+    }
   }
 }
 
@@ -192,6 +232,42 @@ function overlappingLeaves(world: World, scene: Entity, range: Range): Entity[] 
   return leaves;
 }
 
+/**
+ * Returns the exact leaf fragment occupying `range`, splitting at either edge
+ * when needed. This keeps a short zoom/volume operation from accidentally
+ * changing an entire long source clip.
+ */
+function isolateRange(world: World, entity: Entity, range: Range): Entity | null {
+  if (!entity.isAlive() || isGroup(entity)) return null;
+  const fps = world.get(FrameRate)?.value ?? 30;
+  const from = secondsToFrames(range.start, fps);
+  const to = secondsToFrames(range.end, fps);
+  const computed = store(world, Computed);
+
+  let target = entity;
+  let start = computed.start[target.id()];
+  let end = computed.end[target.id()];
+  if (start === undefined || end === undefined || end <= from || start >= to) return null;
+
+  if (from > start && from < end) {
+    const split = splitLeafAt(world, target, from);
+    if (!split) return null;
+    target = split.tail;
+  }
+
+  start = computed.start[target.id()];
+  end = computed.end[target.id()];
+  if (start === undefined || end === undefined) return null;
+
+  if (to > start && to < end) {
+    const split = splitLeafAt(world, target, to);
+    if (!split) return null;
+    target = split.head;
+  }
+
+  return target.isAlive() ? target : null;
+}
+
 function insertCaption(world: World, scene: Entity, start: number, end: number, text: string): boolean {
   const clean = text.trim().slice(0, 500);
   if (!clean) return false;
@@ -223,8 +299,11 @@ function insertCaption(world: World, scene: Entity, start: number, end: number, 
 function applyZoom(world: World, scene: Entity, range: Range, scale: number): number {
   if (!Number.isFinite(scale) || scale < 0.25 || scale > 4) return 0;
   const editor = getDocumentEditor(world);
+  const leaves = overlappingLeaves(world, scene, range);
   let changed = 0;
-  for (const entity of overlappingLeaves(world, scene, range)) {
+  for (const leaf of leaves) {
+    const entity = isolateRange(world, leaf, range);
+    if (!entity) continue;
     editor.editProperty(entity, 'scale', scale);
     changed++;
   }
@@ -237,8 +316,11 @@ function applyVolume(world: World, scene: Entity, range: Range, gainDb: number):
   // JSX volume is linear gain. Clamp to a practical ceiling even though the
   // model contract is already bounded in dB.
   const gain = Math.min(16, Math.max(0, Math.pow(10, gainDb / 20)));
+  const leaves = overlappingLeaves(world, scene, range);
   let changed = 0;
-  for (const entity of overlappingLeaves(world, scene, range)) {
+  for (const leaf of leaves) {
+    const entity = isolateRange(world, leaf, range);
+    if (!entity) continue;
     editor.editProperty(entity, 'volume', gain);
     changed++;
   }
