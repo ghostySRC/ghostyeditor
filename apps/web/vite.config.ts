@@ -11,12 +11,15 @@ import { resolve } from 'path'
 import pkg from '../../package.json'
 
 export default defineConfig(({ mode }) => {
-  // The desktop app bundles this build; missing client env would silently ship with auth disabled.
+  // Cloud accounts are an explicit deployment option. Desktop local mode must
+  // build without any remote authentication configuration.
   if (mode === 'desktop') {
     const env = loadEnv(mode, __dirname, '')
-    for (const key of ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']) {
-      if (!env[key]) {
-        throw new Error(`${key} is not set. Copy apps/web/.env.example to apps/web/.env before building the desktop app.`)
+    if (env.VITE_ENABLE_CLOUD_ACCOUNT === 'true') {
+      for (const key of ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']) {
+        if (!env[key]) {
+          throw new Error(`${key} is required when VITE_ENABLE_CLOUD_ACCOUNT=true.`)
+        }
       }
     }
   }

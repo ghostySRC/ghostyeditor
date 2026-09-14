@@ -14,10 +14,11 @@ import {
   type JSX,
 } from 'solid-js';
 import { toast } from 'somoto';
-import type { Session, User } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 import { FREE_CREDITS_QUOTA, type UserData } from '@diffusionstudio/api-contract';
 
 import { supabase } from '@/lib/supabase';
+import { appUserForSession, type AppUser } from '@/lib/local-session';
 import { trpc } from '@/lib/trpc';
 import { identify, resetIdentity, track } from '@/lib/analytics';
 import { mainBridge } from '@/lib/ipc';
@@ -28,8 +29,11 @@ type OAuthProvider = 'google' | 'apple' | 'github';
 
 type AuthContextValue = {
   session: Accessor<Session | null>;
-  user: Accessor<User | null>;
+  /** Always available: the local identity when no cloud session exists. */
+  user: Accessor<AppUser>;
   isAuthenticated: Accessor<boolean>;
+  hasCloudSession: Accessor<boolean>;
+  isLocalMode: Accessor<boolean>;
   headless: Accessor<boolean>;
   isLoading: Accessor<boolean>;
   accessLevel: Accessor<number>;
@@ -309,8 +313,10 @@ export function AuthProvider(props: { children: JSX.Element }) {
     session,
     isPro,
     hasStripeCustomer,
-    user: () => session()?.user ?? null,
+    user: () => appUserForSession(session()?.user),
     isAuthenticated: () => !!session(),
+    hasCloudSession: () => !!session(),
+    isLocalMode: () => !session(),
     headless,
     isLoading,
     accessLevel,

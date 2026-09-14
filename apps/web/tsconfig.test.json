@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": [
+    "test/**/*.ts",
+    "src/lib/ai-edit-types.ts",
+    "src/lib/ai-operation-utils.ts",
+    "src/lib/local-edit-planner.ts",
+    "src/lib/local-session.ts"
+  ]
+}

@@ -4,7 +4,7 @@
 
 import { Router, HashRouter, Route, useLocation } from '@solidjs/router';
 import { ColorModeProvider } from '@kobalte/core';
-import { Show, createEffect, type JSX } from 'solid-js';
+import { Show, createEffect } from 'solid-js';
 import { Toaster } from "@/components/ui/sonner";
 import { AppContextMenu } from "@/components/app-context-menu";
 
@@ -16,31 +16,9 @@ import { PurchaseSuccess } from '@/components/purchase-success';
 import { ScreenTooSmall } from '@/components/screen-too-small';
 import { UnsupportedBrowser } from '@/components/unsupported-browser';
 import { ProjectPage } from '@/pages/project';
-import { LoginPage } from '@/pages/login';
-import { OnboardingPage, onboardingCompleted } from '@/pages/onboarding';
 import { AuthCallbackPage } from '@/pages/auth-callback';
 import { NotFoundPage } from '@/pages/not-found';
 import { DashboardPage } from '@/pages/dashboard';
-
-function AuthGate(props: { children: JSX.Element }) {
-  const auth = useAuth();
-
-  return (
-    <Show when={!auth.isLoading()}>
-      <Show when={auth.isAuthenticated() || auth.headless()}>
-        <Show
-          when={onboardingCompleted() || auth.headless()}
-          fallback={<OnboardingPage />}
-        >
-          {props.children}
-        </Show>
-      </Show>
-      <Show when={!auth.isAuthenticated()}>
-        <LoginPage />
-      </Show>
-    </Show>
-  );
-}
 
 function BootSplash() {
   const auth = useAuth();
@@ -87,8 +65,8 @@ function App() {
       )}
     >
       <Route path="/auth/callback" component={AuthCallbackPage} />
-      <Route path="/" component={() => <AuthGate><DashboardPage /></AuthGate>} />
-      <Route path="/projects/*ref" component={() => <AuthGate><ProjectPage /></AuthGate>} />
+      <Route path="/" component={DashboardPage} />
+      <Route path="/projects/*ref" component={ProjectPage} />
       <Route path="*404" component={NotFoundPage} />
     </RouterComponent>
   );
