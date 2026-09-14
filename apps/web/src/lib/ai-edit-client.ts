@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import type { DeviceProfile } from './device-profile';
+import type { AiProjectContext } from './ai-project-context';
 
 export type AiEditOperation =
   | { type: 'cut'; start: number; end: number; reason?: string }
@@ -15,6 +16,7 @@ export type AiEditRequest = {
   projectId: string;
   prompt: string;
   device: DeviceProfile;
+  context?: AiProjectContext;
 };
 
 export type AiEditResponse = {
@@ -28,8 +30,8 @@ const endpoint = () =>
 
 /**
  * Calls the remote editing agent. No model inference is performed in-browser.
- * This is intentional: weak clients should only send project metadata and
- * receive deterministic timeline operations.
+ * This is intentional: weak clients should only send compact project metadata
+ * and receive deterministic timeline operations.
  */
 export async function requestAiEdit(request: AiEditRequest): Promise<AiEditResponse> {
   const response = await fetch(endpoint(), {
