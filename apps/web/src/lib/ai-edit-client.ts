@@ -4,19 +4,17 @@
 
 import type { DeviceProfile } from './device-profile';
 import type { AiProjectContext } from './ai-project-context';
+import type { AiEditOperation, AiMediaAnalysis } from './ai-edit-types';
+import { planLocalEdit } from './local-edit-planner';
 
-export type AiEditOperation =
-  | { type: 'cut'; start: number; end: number; reason?: string }
-  | { type: 'keep'; start: number; end: number; reason?: string }
-  | { type: 'caption'; start: number; end: number; text: string }
-  | { type: 'zoom'; start: number; end: number; scale: number }
-  | { type: 'volume'; start: number; end: number; gainDb: number };
+export type { AiEditOperation } from './ai-edit-types';
 
 export type AiEditRequest = {
   projectId: string;
   prompt: string;
   device: DeviceProfile;
   context?: AiProjectContext;
+  analysis: AiMediaAnalysis;
 };
 
 export type AiEditResponse = {
@@ -25,30 +23,15 @@ export type AiEditResponse = {
   editId?: string;
 };
 
-const endpoint = () =>
-  (import.meta.env.VITE_AI_EDIT_ENDPOINT as string | undefined) || '/api/ai/edit';
-
 /**
- * Calls the remote editing agent. No model inference is performed in-browser.
- * This is intentional: weak clients should only send compact project metadata
- * and receive deterministic timeline operations.
+ * Plans locally from compact measured metadata. This intentionally performs no
+ * network request and needs no API key, credits, account, or hosted service.
  */
 export async function requestAiEdit(request: AiEditRequest): Promise<AiEditResponse> {
-  const response = await fetch(endpoint(), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(request),
-  });
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(text || `AI edit request failed (${response.status})`);
-  }
-
-  const payload = await response.json() as Partial<AiEditResponse>;
+  const payload = planLocalEdit(request.prompt, request.analysis);
   return {
-    message: payload.message || 'Edit plan received.',
-    operations: Array.isArray(payload.operations) ? payload.operations : [],
-    editId: payload.editId,
+    message: payload.message,
+    operations: payload.operations,
+    editId: crypto.randomUUID(),
   };
 }

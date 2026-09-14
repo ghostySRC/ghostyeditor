@@ -2,13 +2,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Show, createSignal } from 'solid-js';
+import { Show, createSignal, onCleanup } from 'solid-js';
 import { useWorld } from '@diffusionstudio/koota-solid';
 import { useProject } from '@/context/project';
 import { applyAiEditOperations } from '@/engine/ai-apply';
+import { getEditHistory } from '@/engine/history';
 import { buildAiProjectContext } from '@/lib/ai-project-context';
 import { getDeviceProfile } from '@/lib/device-profile';
 import { requestAiEdit } from '@/lib/ai-edit-client';
+import { analyzeActiveTimeline } from '@/lib/local-media-analysis';
+import { promptRequiresMediaAnalysis } from '@/lib/local-edit-planner';
 
 const profile = getDeviceProfile();
 
@@ -19,14 +22,19 @@ export function AiEditPrompt() {
   const [busy, setBusy] = createSignal(false);
   const [status, setStatus] = createSignal('');
   const [operationCount, setOperationCount] = createSignal(0);
+  let controller: AbortController | undefined;
+
+  onCleanup(() => controller?.abort());
 
   const submit = async () => {
     const text = prompt().trim();
     if (!text || busy()) return;
 
     setBusy(true);
-    setStatus('AI is analysing and planning the edit…');
+    setStatus('Preparing video…');
     setOperationCount(0);
+    controller = new AbortController();
+    const activeController = controller;
 
     try {
       const context = buildAiProjectContext(world);
@@ -35,11 +43,39 @@ export function AiEditPrompt() {
         return;
       }
 
+      if (/^(?:undo|undo the last (?:ai )?edit)[.!]?$/i.test(text)) {
+        const history = getEditHistory(world);
+        if (!history.canUndo()) {
+          setStatus('There is nothing to undo.');
+          return;
+        }
+        history.undo();
+        setStatus('Undid the last edit.');
+        return;
+      }
+
+      const analysis = promptRequiresMediaAnalysis(text)
+        ? await analyzeActiveTimeline(
+            world,
+            profile,
+            activeController.signal,
+            ({ stage, progress }) => setStatus(`${stage}… ${Math.round(progress * 100)}%`),
+          )
+        : {
+            duration: context.duration,
+            segments: [],
+            hasAudio: false,
+            hasVideo: false,
+            hasTranscript: false,
+            warnings: [],
+          };
+      setStatus('Planning edit locally…');
       const result = await requestAiEdit({
         projectId: project.id(),
         prompt: text,
         device: profile,
         context,
+        analysis,
       });
 
       setOperationCount(result.operations.length);
@@ -62,8 +98,11 @@ export function AiEditPrompt() {
           : (result.message || 'AI plan received, but nothing could be applied to the active scene.'),
       );
     } catch (error) {
-      setStatus((error as Error).message || 'AI edit failed.');
+      setStatus((error as Error).name === 'AbortError'
+        ? 'AI edit cancelled.'
+        : ((error as Error).message || 'AI edit failed.'));
     } finally {
+      if (controller === activeController) controller = undefined;
       setBusy(false);
     }
   };
@@ -83,7 +122,7 @@ export function AiEditPrompt() {
           <span class="rounded bg-primary/15 px-1.5 py-0.5 text-primary">Chromebook mode</span>
         </Show>
         <span class="ml-auto">
-          {profile.previewHeight}p preview · cloud AI · real timeline edits
+          {profile.previewHeight}p preview · local AI · no API key
         </span>
       </div>
 
@@ -99,10 +138,10 @@ export function AiEditPrompt() {
         <button
           type="button"
           class="self-stretch rounded-lg bg-primary px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={!prompt().trim() || busy()}
-          onClick={() => void submit()}
+          disabled={!prompt().trim() && !busy()}
+          onClick={() => busy() ? controller?.abort() : void submit()}
         >
-          {busy() ? 'Editing…' : 'Edit'}
+          {busy() ? 'Cancel' : 'Edit'}
         </button>
       </div>
 

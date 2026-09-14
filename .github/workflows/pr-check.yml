@@ -25,5 +25,5 @@ jobs:
       - name: Typecheck web editor
         run: npm run check --workspace=@diffusionstudio/web
 
-      - name: Typecheck AI edge endpoint
-        run: npx tsc --noEmit --target ES2024 --module ESNext --moduleResolution Bundler --lib ES2024,DOM --types node apps/web/api/ai/edit.ts
+      - name: Test local AI planner
+        run: npm run test:ai --workspace=@diffusionstudio/web

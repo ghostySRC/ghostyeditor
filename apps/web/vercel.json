@@ -4,7 +4,7 @@
   "buildCommand": "cp .env.example .env && npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/((?!api(?:/|$))(?!.*\\..*).*)", "destination": "/index.html" }
+    { "source": "/((?!.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

@@ -15,7 +15,7 @@ export type DeviceProfile = {
   frameCacheSeconds: number;
   thumbnailIntervalSeconds: number;
   preferProxy: boolean;
-  cloudAiOnly: boolean;
+  localAi: boolean;
   cloudExportPreferred: boolean;
 };
 
@@ -54,7 +54,7 @@ export function detectDeviceProfile(): DeviceProfile {
       frameCacheSeconds: 3,
       thumbnailIntervalSeconds: 8,
       preferProxy: true,
-      cloudAiOnly: true,
+      localAi: true,
       cloudExportPreferred: true,
     };
   }
@@ -72,7 +72,7 @@ export function detectDeviceProfile(): DeviceProfile {
       frameCacheSeconds: 12,
       thumbnailIntervalSeconds: 2,
       preferProxy: false,
-      cloudAiOnly: false,
+      localAi: true,
       cloudExportPreferred: false,
     };
   }
@@ -88,7 +88,7 @@ export function detectDeviceProfile(): DeviceProfile {
     frameCacheSeconds: 7,
     thumbnailIntervalSeconds: 4,
     preferProxy: true,
-    cloudAiOnly: false,
+    localAi: true,
     cloudExportPreferred: true,
   };
 }

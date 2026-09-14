@@ -57,6 +57,15 @@ export default [
     },
   },
   {
+    files: ["test/**/*.ts"],
+    languageOptions: {
+      parserOptions: {
+        project: "./tsconfig.test.json",
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
     // Ignore patterns
     ignores: [
       "node_modules/**",

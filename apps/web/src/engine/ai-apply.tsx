@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Deterministic application layer for the remote AI editor.
+ * Deterministic application layer for the local AI editor.
  *
  * The model is never allowed to mutate the world directly. It returns a small
  * operation list; this module validates that list and translates it into the
@@ -31,15 +31,15 @@ import { Or } from 'koota';
 import { getDocumentEditor } from './editor';
 import { getEditHistory } from './history';
 import { moveEntityTo, trimIn, trimOut } from './timing';
+import { normalizeAiCuts, remapAiTime, validAiRange } from '@/lib/ai-operation-utils';
 
 import type { Entity, World } from 'koota';
-import type { AiEditOperation } from '@/lib/ai-edit-client';
+import type { AiEditOperation } from '@/lib/ai-edit-types';
+import type { AiTimeRange } from '@/lib/ai-operation-utils';
 
 const NODES = Or(Geometry, Group, AdjustmentLayer);
 const MAX_OPERATIONS = 500;
-const MAX_TIME_SECONDS = 24 * 60 * 60;
-
-type Range = { start: number; end: number };
+type Range = AiTimeRange;
 
 export type AiApplyResult = {
   applied: number;
@@ -49,47 +49,6 @@ export type AiApplyResult = {
   zooms: number;
   volumes: number;
 };
-
-function finiteTime(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= MAX_TIME_SECONDS;
-}
-
-function validRange(operation: { start: number; end: number }): boolean {
-  return finiteTime(operation.start) && finiteTime(operation.end) && operation.end > operation.start;
-}
-
-function normalizeCuts(operations: AiEditOperation[]): Range[] {
-  const cuts = operations
-    .filter((operation): operation is Extract<AiEditOperation, { type: 'cut' }> => operation.type === 'cut')
-    .filter(validRange)
-    .map(({ start, end }) => ({ start, end }))
-    .sort((a, b) => a.start - b.start);
-
-  const merged: Range[] = [];
-  for (const cut of cuts) {
-    const previous = merged[merged.length - 1];
-    if (!previous || cut.start > previous.end) {
-      merged.push({ ...cut });
-      continue;
-    }
-    previous.end = Math.max(previous.end, cut.end);
-  }
-  return merged;
-}
-
-/** Maps an original-media timestamp onto the ripple-deleted timeline. */
-function remapTime(seconds: number, cuts: Range[]): number {
-  let removed = 0;
-  for (const cut of cuts) {
-    if (seconds >= cut.end) {
-      removed += cut.end - cut.start;
-      continue;
-    }
-    if (seconds > cut.start) return Math.max(0, cut.start - removed);
-    break;
-  }
-  return Math.max(0, seconds - removed);
-}
 
 function topLevelNodes(world: World, scene: Entity): Entity[] {
   return [...world.query(NODES, ChildOf(scene))];
@@ -344,7 +303,7 @@ export function applyAiEditOperations(world: World, operations: AiEditOperation[
 
   const safe = operations.slice(0, MAX_OPERATIONS);
   result.skipped += Math.max(0, operations.length - safe.length);
-  const cuts = normalizeCuts(safe);
+  const cuts = normalizeAiCuts(safe);
   const history = getEditHistory(world);
 
   history.beginGesture();
@@ -363,14 +322,14 @@ export function applyAiEditOperations(world: World, operations: AiEditOperation[
         // Keep is useful planning metadata; cuts are what mutate the timeline.
         continue;
       }
-      if (!validRange(operation)) {
+      if (!validAiRange(operation)) {
         result.skipped++;
         continue;
       }
 
       const mapped: Range = {
-        start: remapTime(operation.start, cuts),
-        end: remapTime(operation.end, cuts),
+        start: remapAiTime(operation.start, cuts),
+        end: remapAiTime(operation.end, cuts),
       };
       if (mapped.end <= mapped.start) {
         result.skipped++;

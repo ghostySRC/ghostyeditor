@@ -1,44 +1,81 @@
 # Ghosty AI editor
 
-Ghosty Editor keeps heavy AI and rendering work off low-memory clients such as 4 GB Chromebooks.
+Ghosty Editor's core AI editing path is local-first. It does not call a paid
+AI API, require an API key, consume credits, upload the user's media, or impose
+an external generation limit.
 
-## Current flow
+## Current local flow
 
-1. The browser edits the real Diffusion Studio project and timeline.
-2. `buildAiProjectContext()` creates a compact description of the active scene. Full local paths and media bytes are not included.
-3. `/api/ai/edit` sends the user's prompt and timeline context to an OpenAI-compatible model.
-4. The model may return only deterministic operations: `cut`, `keep`, `caption`, `zoom`, and `volume`.
-5. `applyAiEditOperations()` validates and applies those operations through Diffusion Studio's own `DocumentEditor` and edit history.
-6. One AI pass is one Undo step.
+1. The browser opens media through the existing Diffusion Studio asset library.
+2. A short-lived module worker decodes one file at a time with Mediabunny.
+3. Audio is reduced to bounded 500 ms RMS/peak bins. Sparse 64×36 video samples
+   produce motion, static-frame, and scene-change scores.
+4. Source-time measurements are mapped onto each clip's trimmed, retimed
+   position on the real timeline.
+5. The zero-download local planner converts supported natural-language commands
+   and measured signals into `cut`, `caption`, `zoom`, and `volume` operations.
+6. `applyAiEditOperations()` validates and applies the plan through Diffusion
+   Studio's `DocumentEditor`. One AI pass is one Undo step.
 
-The planner is deliberately prevented from guessing what is visually or audibly inside footage. Requests such as “remove the boring parts” need the semantic media-analysis pipeline before the planner is allowed to make those cuts.
+Model output and analysis code never mutate source files directly.
 
-## AI provider
+## Commands available without a model download
 
-The server endpoint is provider-agnostic. Configure these server-side environment variables on the deployment:
+- `Cut 30 to 45 seconds.`
+- `Cut all silences longer than 2 seconds.`
+- `Remove dead footage and make this faster paced.`
+- `Keep mostly the action.`
+- `Turn this into a 30 second highlight.`
+- `Make the first 20 seconds more interesting.`
+- `Undo the last AI edit.`
 
-```text
-AI_EDIT_BASE_URL=https://your-openai-compatible-provider.example/v1
-AI_EDIT_API_KEY=your-server-side-key
-AI_EDIT_MODEL=your-model-name
-```
+The planner deliberately refuses to guess concepts such as “funny” when no
+transcript or visual-semantic result proves them. Caption requests use real
+transcript segments only; until a local speech pack is installed, the UI says
+that a transcript is unavailable instead of inventing dialogue.
 
-Do not prefix the API key with `VITE_`; that would expose it to the browser bundle.
+## Memory and cancellation
 
-For development, compatible providers can include a hosted OpenAI-compatible API or a self-hosted endpoint. The model must support ordinary chat-completions-style requests and reliably return JSON.
+- Files are passed to a worker as `File`/`Blob` handles; the whole video is not
+  copied into an `ArrayBuffer`.
+- Only source ranges currently used by timeline clips are decoded.
+- Audio samples and video frames are consumed incrementally and immediately
+  closed.
+- Video is sampled sparsely at 2-second intervals in Chromebook mode, and the
+  scan is capped at 900 samples per source.
+- Only compact numeric bins return to the main thread.
+- Assets are analyzed sequentially so decoder memory is bounded.
+- The most recent compact result for each browser `File` is reused when its
+  ranges and performance mode are unchanged.
+- Cancel terminates the active worker, releasing its decoder resources.
 
-## Chromebook target
+## Chromebook Lite defaults
 
-Low-memory mode currently targets:
+- 480p normal preview target
+- 360p scrub preview target
+- tiny timeline caches
+- 500 ms audio-analysis bins
+- one 64×36 visual sample every 2 seconds (maximum 900 per source)
+- zero-download deterministic planner
+- no visual-language model loaded by default
 
-- 480p normal preview
-- 360p scrub preview
-- cloud AI inference
-- no large browser-side AI models
-- bounded timeline context and edit-operation count
+## Model policy and licenses
 
-Proxy generation, semantic analysis, and final cloud rendering are the next major backend pieces.
+No ML model is automatically downloaded in this milestone, so the local
+planner adds zero model RAM and has no separate model license. Runtime media
+decoding uses the repository's existing `mediabunny` dependency (MIT).
 
-## Before a public deployment
+Future optional packs must show download size, approximate RAM use, license,
+and installed state before downloading. The intended first speech candidate is
+Whisper Tiny or an equivalent quantized browser build; it must be benchmarked
+on the 4 GB ARM Chromebook before becoming a default. An optional 0.5B-class
+instruction model may broaden prompt phrasing, but the deterministic planner
+must remain the default and all output must pass the same schema validation.
 
-The AI route must not be exposed with an unrestricted paid server key. Add authentication and per-user rate limits, or switch to a bring-your-own-key workflow, before making a cost-bearing endpoint public.
+## Known next work
+
+- benchmark and add an optional browser-local speech-to-text pack
+- add persistent model install/remove management using Cache Storage or OPFS
+- generate low-bitrate 480p proxies for long/high-resolution sources
+- add optional sparse visual semantics after real 4 GB memory measurements
+- extend integration tests around complex nested timeline cuts and effects
