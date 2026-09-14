@@ -6,6 +6,7 @@ import { Show, createSignal } from 'solid-js';
 import { useWorld } from '@diffusionstudio/koota-solid';
 import { useProject } from '@/context/project';
 import { applyAiEditOperations } from '@/engine/ai-apply';
+import { buildAiProjectContext } from '@/lib/ai-project-context';
 import { getDeviceProfile } from '@/lib/device-profile';
 import { requestAiEdit } from '@/lib/ai-edit-client';
 
@@ -28,10 +29,17 @@ export function AiEditPrompt() {
     setOperationCount(0);
 
     try {
+      const context = buildAiProjectContext(world);
+      if (!context) {
+        setStatus('Open a scene before asking AI to edit it.');
+        return;
+      }
+
       const result = await requestAiEdit({
         projectId: project.id(),
         prompt: text,
         device: profile,
+        context,
       });
 
       setOperationCount(result.operations.length);
