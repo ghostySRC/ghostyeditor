@@ -1,0 +1,13 @@
+{
+  "name": "Ghosty Editor Web",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": {
+      "label": "Ghosty Editor",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "npm ci",
+  "postStartCommand": "npm run dev:web_v1 -- --host 0.0.0.0"
+}
