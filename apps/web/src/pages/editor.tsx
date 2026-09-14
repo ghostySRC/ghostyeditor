@@ -7,6 +7,7 @@ import { Canvas } from "@/components/canvas";
 import { Timeline, Layers } from "@/components/timeline";
 import { Soundboard, Inspector } from "@/components/sidebar-right";
 import { FloatingProjectHeader, SidebarLeft } from "@/components/sidebar-left";
+import { AiEditPrompt } from '@/components/ai-editor/ai-edit-prompt';
 import { useLayout, MIN_TIMELINE_HEIGHT } from "@/context/layout";
 import { useEditorApi } from "@/context/dapi";
 import { RULER_HEIGHT } from "@/engine/timeline";
@@ -228,6 +229,7 @@ export function EditorPage() {
       }}
       style={timelineStyles()}
     >
+      <AiEditPrompt />
       <Show when={isDesktop && !isFullscreen()}>
         <div class="fixed top-0 left-0 right-0 h-10 z-20" style="-webkit-app-region: drag;" />
       </Show>
