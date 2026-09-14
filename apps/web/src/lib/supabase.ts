@@ -6,10 +6,14 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+/** Cloud accounts are opt-in. Local editing never constructs an auth client. */
+export const cloudAccountsEnabled = import.meta.env.VITE_ENABLE_CLOUD_ACCOUNT === 'true';
 
 function initSupabase(): SupabaseClient | null {
+  if (!cloudAccountsEnabled) return null;
+
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('[supabase] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are not set. Auth is disabled.');
+    console.warn('[supabase] Cloud accounts are enabled but credentials are missing.');
     return null;
   }
 

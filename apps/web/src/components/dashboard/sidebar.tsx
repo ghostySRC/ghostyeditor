@@ -92,6 +92,7 @@ export function DashboardSidebarNav(props: DashboardSidebarNavProps) {
 type DashboardSidebarUserProps = {
   active: boolean;
   onClick: () => void;
+  localMode?: boolean;
 };
 
 export function DashboardSidebarUser(props: DashboardSidebarUserProps) {
@@ -102,7 +103,7 @@ export function DashboardSidebarUser(props: DashboardSidebarUserProps) {
     return user?.user_metadata?.full_name || user?.email || "User";
   };
 
-  const planLabel = () => (auth.isPro() ? "Pro Plan" : "Free Plan");
+  const planLabel = () => (props.localMode ? "Local mode · cloud optional" : auth.isPro() ? "Pro Plan" : "Free Plan");
 
   const initial = () => displayName().charAt(0).toUpperCase();
   const avatarUrl = useAvatar();

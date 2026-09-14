@@ -8,6 +8,7 @@ import { useWorld } from '@diffusionstudio/koota-solid';
 import { Project } from '@diffusionstudio/runtime';
 import { useProject } from '@/context/project';
 import { useAuth } from '@/context/auth';
+import type { AppUser } from '@/lib/local-session';
 import { useEngineContext } from '@/engine';
 import { t, q, q0, m } from "@/lib/cli-rpc";
 import { editorSession, requireEditorSession, setEditorSession } from "./session";
@@ -29,7 +30,6 @@ import { useFullscreenState } from "@/hooks/use-fullscreen-state";
 
 import type { JSX, Accessor } from 'solid-js';
 import type { Navigator } from '@solidjs/router';
-import type { User } from '@supabase/supabase-js';
 
 type EditorApiProviderProps = {
   children: JSX.Element;
@@ -54,7 +54,7 @@ export function EditorApi() {
   const auth = useAuth();
 
   const requireAuth = <I, O>(fn: (data: I) => Promise<O>) => (data: I) => {
-    assert(auth.isAuthenticated(), "Sign in required: AI generation needs a Diffusion Studio account.");
+    assert(auth.hasCloudSession(), "A cloud account is required for this optional cloud feature. Local mode never uploads media.");
     return fn(data);
   };
 
@@ -102,7 +102,7 @@ export function EditorApiProvider(props: EditorApiProviderProps) {
 
 type AppRouterDeps = {
   navigate: Navigator;
-  getUser: () => User;
+  getUser: () => AppUser;
   requireAuth: <I, O>(fn: (data: I) => Promise<O>) => (data: I) => Promise<O>;
 };
 

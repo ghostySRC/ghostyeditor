@@ -10,7 +10,7 @@
     "build:desktop": "tsc -b && vite build --mode desktop --base=./ --outDir=../desktop/web",
     "preview": "vite preview",
     "check": "tsc -p tsconfig.app.json --noEmit",
-    "test:ai": "tsc -p tsconfig.test.json && node --test --experimental-strip-types test/local-edit-planner.test.ts",
+    "test:ai": "tsc -p tsconfig.test.json && node --test --experimental-strip-types test/*.test.ts",
     "lint": "eslint ."
   },
   "dependencies": {

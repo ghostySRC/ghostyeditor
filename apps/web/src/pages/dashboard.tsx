@@ -15,6 +15,7 @@ import { DashboardSettingsView } from "@/components/dashboard/settings-view";
 import { DashboardSidebarHeader, DashboardSidebarNav, DashboardSidebarUser, DashboardSidebarItem } from "@/components/dashboard/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { useFullscreenState } from "@/hooks/use-fullscreen-state";
+import { useAuth } from "@/context/auth";
 
 import type { DashboardView } from "@/components/dashboard/types";
 
@@ -37,8 +38,14 @@ function parseView(value: string | string[] | undefined): DashboardView {
 export function DashboardPage() {
   const [params, setParams] = useSearchParams();
   const isFullscreen = useFullscreenState();
+  const auth = useAuth();
 
-  const view = (): DashboardView => parseView(params.dashboard);
+  const view = (): DashboardView => {
+    const requested = parseView(params.dashboard);
+    return auth.isLocalMode() && ["ai-credits", "billing", "account"].includes(requested)
+      ? "projects"
+      : requested;
+  };
   const setView = (next: DashboardView) => setParams({ dashboard: next }, { replace: true });
 
   return (
@@ -51,8 +58,10 @@ export function DashboardPage() {
         <DashboardSidebarNav
           footer={
             <>
-              <DashboardSidebarItem active={view() === "ai-credits"} onClick={() => setView("ai-credits")} icon="ai-generate" label="AI credits" />
-              <DashboardSidebarItem active={view() === "billing"} onClick={() => setView("billing")} icon="billing" label="Billing" />
+              <Show when={!auth.isLocalMode()}>
+                <DashboardSidebarItem active={view() === "ai-credits"} onClick={() => setView("ai-credits")} icon="ai-generate" label="AI credits" />
+                <DashboardSidebarItem active={view() === "billing"} onClick={() => setView("billing")} icon="billing" label="Billing" />
+              </Show>
               <DashboardSidebarItem active={view() === "settings"} onClick={() => setView("settings")} icon="settings" label="Settings" />
               <DashboardSidebarItem active={view() === "help"} onClick={() => setView("help")} icon="help" label="Help" />
             </>
@@ -60,7 +69,7 @@ export function DashboardPage() {
         >
           <DashboardSidebarItem active={view() === "projects"} onClick={() => setView("projects")} icon="diffusion-project-file" label="Projects" />
         </DashboardSidebarNav>
-        <DashboardSidebarUser active={view() === "account"} onClick={() => setView("account")} />
+        <DashboardSidebarUser active={view() === "account"} onClick={() => setView("account")} localMode={auth.isLocalMode()} />
       </aside>
 
       <Separator orientation="vertical" class="bg-border-strong" />
