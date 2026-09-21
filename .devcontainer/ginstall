@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$#" -lt 1 ]; then
+  echo "Usage: ginstall package [package ...]"
+  exit 1
+fi
+
+PERSIST="/workspaces/.ghostylinux-home"
+mkdir -p "$PERSIST"
+touch "$PERSIST/packages.txt"
+
+for pkg in "$@"; do
+  if [[ ! "$pkg" =~ ^[a-zA-Z0-9][a-zA-Z0-9+._:-]*$ ]]; then
+    echo "Invalid package name: $pkg" >&2
+    exit 2
+  fi
+done
+
+sudo apt-get update
+sudo apt-get install -y "$@"
+printf '%s\n' "$@" >> "$PERSIST/packages.txt"
+sort -u "$PERSIST/packages.txt" -o "$PERSIST/packages.txt"
+
+echo
+echo "Saved package list: $PERSIST/packages.txt"
+echo "These packages will be restored after a GhostyLinux container rebuild."
