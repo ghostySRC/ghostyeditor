@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git lfs install --system || true
+RUN git lfs install --system || true\n\nRUN printf '%s\\n' '<!doctype html><meta charset="utf-8"><title>GhostyLinux Desktop</title><script>location.replace("vnc.html?autoconnect=1&resize=scale&quality=8&compression=2")</script>' > /usr/share/novnc/index.html
 
 COPY .devcontainer/ghosty-chromium /usr/local/bin/ghosty-chromium
 RUN chmod +x /usr/local/bin/ghosty-chromium
