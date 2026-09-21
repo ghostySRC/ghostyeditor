@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GhostyLinux</title>
+<meta name="description" content="GhostyLinux — a real 64-bit Linux desktop in your browser, powered by GitHub Codespaces.">
+<style>
+:root{--bg:#080b12;--panel:#101623;--panel2:#151d2c;--line:#263246;--text:#e8eef9;--muted:#9aabc3;--green:#47e6a6;--cyan:#5fd7ff;--shadow:0 28px 80px rgba(0,0,0,.45)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:radial-gradient(900px 520px at 20% -10%,#182b42 0,transparent 60%),radial-gradient(700px 480px at 100% 20%,#102a29 0,transparent 55%),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{min-height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;padding:18px 24px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(8,11,18,.72);backdrop-filter:blur(14px);position:sticky;top:0;z-index:5}
+.brand{font-weight:800;letter-spacing:.2px;font-size:20px}.brand span{color:var(--green)}.badge{margin-left:12px;border:1px solid #27523f;background:#10291f;color:#9af0c8;border-radius:999px;padding:5px 9px;font-size:12px}
+main{width:min(1100px,92vw);margin:auto;padding:64px 0 72px}
+.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:34px;align-items:center}
+h1{font-size:clamp(42px,7vw,82px);line-height:.95;margin:0 0 22px;letter-spacing:-3px}h1 span{color:var(--green)}
+.lead{font-size:clamp(17px,2vw,22px);line-height:1.55;color:var(--muted);max-width:720px;margin:0 0 28px}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:12px;padding:14px 19px;font-weight:750;border:1px solid var(--line);color:var(--text);background:var(--panel2);transition:.16s ease;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+a.btn:hover{transform:translateY(-1px);border-color:#4b627f}
+a.primary{background:linear-gradient(135deg,#1c704f,#135f68);border-color:#2b9574;color:white;box-shadow:0 12px 36px rgba(34,197,133,.18)}
+.note{font-size:13px;color:#7f91aa;line-height:1.5}
+.machine{background:linear-gradient(180deg,rgba(21,29,44,.93),rgba(12,17,27,.97));border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:var(--shadow)}
+.screen{background:#040609;border:1px solid #263246;border-radius:12px;padding:17px 16px 19px;font-family:"SFMono-Regular",Consolas,monospace;font-size:13px;line-height:1.75;min-height:270px;color:#c9d4e5}
+.prompt{color:var(--green)}.dim{color:#74859f}.cyan{color:var(--cyan)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:42px}.card{border:1px solid var(--line);background:rgba(16,22,35,.72);border-radius:15px;padding:18px}.card b{display:block;margin-bottom:7px}.card span{font-size:13px;line-height:1.55;color:var(--muted)}
+.section{margin-top:50px;padding-top:36px;border-top:1px solid rgba(255,255,255,.08)}.section h2{font-size:28px;margin:0 0 10px}.section p{color:var(--muted);line-height:1.65;max-width:850px}
+code{font-family:"SFMono-Regular",Consolas,monospace;color:#b8f6da}
+footer{padding:20px 24px;color:#667991;font-size:12px;border-top:1px solid rgba(255,255,255,.06)}
+@media(max-width:780px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}h1{letter-spacing:-2px}}
+@media(max-width:480px){main{padding-top:38px}.grid{grid-template-columns:1fr}.actions a{width:100%}}
+</style>
+</head>
+<body>
+<header><div class="brand">Ghosty<span>Linux</span></div><div class="badge">Cloud v2</div></header>
+<main>
+  <section class="hero">
+    <div>
+      <h1>Real Linux.<br><span>In your Chromebook.</span></h1>
+      <p class="lead">The new GhostyLinux runs on a real 64-bit Linux cloud machine instead of emulating an ancient 32-bit PC in your tab. You get a graphical desktop, Firefox, Chromium, terminal, Git, Python, Node, compilers and normal Linux package installs.</p>
+      <div class="actions">
+        <a class="btn primary" href="https://codespaces.new/ghostySRC/ghostyeditor/tree/ghostylinux-cloud-v2?quickstart=1">Launch full 64-bit GhostyLinux</a>
+        <a class="btn" href="./local.html">Run local emulator</a>
+      </div>
+      <div class="note">First cloud launch has to build the desktop image. After that, Codespaces can resume it. Port 6080 is configured to open the Linux desktop automatically.</div>
+    </div>
+    <div class="machine">
+      <div class="screen">
+        <span class="dim">ghostylinux@cloud:~$</span> <span class="prompt">uname -m</span><br>
+        x86_64<br><br>
+        <span class="dim">ghostylinux@cloud:~$</span> <span class="prompt">git clone</span> https://github.com/OWNER/PROJECT.git<br>
+        <span class="cyan">Cloning into 'PROJECT'...</span><br><br>
+        <span class="dim">ghostylinux@cloud:~$</span> <span class="prompt">sudo apt install</span> package-name<br>
+        <span class="cyan">Installing...</span><br><br>
+        <span class="dim">Desktop:</span> LXDE + noVNC<br>
+        <span class="dim">Browsers:</span> Firefox ESR + Chromium<br>
+        <span class="dim">Dev:</span> Git · Python · Node · GCC · CMake · FFmpeg
+      </div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card"><b>64-bit x86 Linux</b><span>No v86 32-bit ceiling. Modern amd64 Linux software is now possible.</span></div>
+    <div class="card"><b>2 cores / 8 GB minimum</b><span>The Codespaces configuration requires at least a 2-core, 8 GB machine with 32 GB storage.</span></div>
+    <div class="card"><b>Real package manager</b><span>Use <code>sudo apt install</code>, download files, compile programs and clone GitHub projects.</span></div>
+    <div class="card"><b>Private desktop port</b><span>The desktop is forwarded through your authenticated GitHub Codespace instead of exposing VNC directly.</span></div>
+  </section>
+
+  <section class="section">
+    <h2>What changed from v1?</h2>
+    <p>v1 remains available as Local Mode and runs entirely inside Chrome using WebAssembly. Cloud v2 trades that offline/local design for a much more capable machine: x86-64, far more RAM, multiple cores, modern browsers, normal package installation, and a persistent Codespace filesystem. It automatically stops when idle so it doesn't keep using compute while you're away.</p>
+  </section>
+</main>
+<footer>GhostyLinux · cloud desktop configuration by ghosty · powered by GitHub Codespaces and open-source Linux software</footer>
+</body>
+</html>

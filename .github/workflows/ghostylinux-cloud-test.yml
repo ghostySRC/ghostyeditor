@@ -1,0 +1,52 @@
+name: Test GhostyLinux Cloud
+
+on:
+  push:
+    branches:
+      - ghostylinux-cloud-v2
+    paths:
+      - ".devcontainer/**"
+      - ".github/workflows/ghostylinux-cloud-test.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".devcontainer/**"
+      - ".github/workflows/ghostylinux-cloud-test.yml"
+  workflow_dispatch:
+
+jobs:
+  build-and-runtime-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build GhostyLinux image
+        run: docker build -f .devcontainer/Dockerfile -t ghostylinux-cloud:test .
+
+      - name: Start test container
+        run: |
+          docker run -d --name ghostylinux-test -p 6080:6080 ghostylinux-cloud:test sleep infinity
+          docker exec ghostylinux-test chown -R vscode:vscode /workspaces || true
+
+      - name: Start graphical desktop
+        run: |
+          docker exec -u vscode -w /workspaces ghostylinux-test bash /workspaces/.devcontainer/start-desktop.sh
+
+      - name: Verify VNC and noVNC
+        run: |
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:6080/vnc.html >/dev/null && break
+            sleep 1
+          done
+          curl -fI http://127.0.0.1:6080/vnc.html
+          docker exec ghostylinux-test bash -lc 'nc -z 127.0.0.1 5901'
+          docker exec ghostylinux-test bash -lc 'nc -z 127.0.0.1 6080'
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          docker logs ghostylinux-test || true
+          docker exec ghostylinux-test bash -lc 'cat /tmp/ghostylinux-vnc-start.log 2>/dev/null || true; cat /tmp/ghostylinux-novnc.log 2>/dev/null || true; find /home/vscode/.vnc -type f -maxdepth 1 -print -exec tail -n 100 {} \; 2>/dev/null || true' || true
