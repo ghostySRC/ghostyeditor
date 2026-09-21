@@ -7,6 +7,12 @@ on:
     paths:
       - ".devcontainer/**"
       - ".github/workflows/ghostylinux-cloud-test.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".devcontainer/**"
+      - ".github/workflows/ghostylinux-cloud-test.yml"
   workflow_dispatch:
 
 jobs:
